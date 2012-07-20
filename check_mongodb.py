@@ -114,6 +114,7 @@ def main(argv):
 
     p.add_option('-H', '--host', action='store', type='string', dest='host', default='127.0.0.1', help='The hostname you want to connect to')
     p.add_option('-P', '--port', action='store', type='int', dest='port', default=27017, help='The port mongodb is runnung on')
+    p.add_option('-t', '--timeout', action='store',type='int', dest='timeout', default=30, help='The network timeout for mongo connection')
     p.add_option('-u', '--user', action='store', type='string', dest='user', default=None, help='The username you want to login as')
     p.add_option('-p', '--pass', action='store', type='string', dest='passwd', default=None, help='The password you want to use for that user')
     p.add_option('-W', '--warning', action='store', dest='warning', default=None, help='The warning threshold we want to set')
@@ -135,6 +136,7 @@ def main(argv):
     port = options.port
     user = options.user
     passwd = options.passwd
+    timeout = options.timeout;
     if (options.action=='replset_state'):
         warning = str(options.warning or "")
         critical = str(options.critical or "")
@@ -157,7 +159,7 @@ def main(argv):
     # moving the login up here and passing in the connection
     #
     start = time.time()
-    err,con=mongo_connect(host, port,ssl, user,passwd, replicaset)
+    err,con=mongo_connect(host, port,ssl, user,passwd, replicaset, timeout)
     if err!=0:
         return err;
 
@@ -212,19 +214,19 @@ def main(argv):
     else:
         return check_connect(host, port, warning, critical, perf_data, user, passwd, conn_time)
 
-def mongo_connect(host=None, port=None,ssl=False, user=None,passwd=None,replica=None):
+def mongo_connect(host=None, port=None,ssl=False, user=None,passwd=None,replica=None, timeout=None):
     try:
         # ssl connection for pymongo > 2.1
         if pymongo.version >= "2.1":
             if replica is None:
-                con = pymongo.Connection(host, port, read_preference=pymongo.ReadPreference.SECONDARY, ssl=ssl)
+                con = pymongo.Connection(host, port, read_preference=pymongo.ReadPreference.SECONDARY, ssl=ssl, network_timeout=timeout)
             else:
-                con = pymongo.Connection(host, port, read_preference=pymongo.ReadPreference.SECONDARY, ssl=ssl, replicaSet=replica)
+                con = pymongo.Connection(host, port, read_preference=pymongo.ReadPreference.SECONDARY, ssl=ssl, replicaSet=replica, network_timeout=timeout)
         else:
             if replica is None:
-                con = pymongo.Connection(host, port, slave_okay=True)
+                con = pymongo.Connection(host, port, slave_okay=True,network_timeout=timeout)
             else:
-                con = pymongo.Connection(host, port, slave_okay=True, replicaSet=replica)
+                con = pymongo.Connection(host, port, slave_okay=True, replicaSet=replica,network_timeout=timeout)
 
         if user and passwd:
             db = con["admin"]
